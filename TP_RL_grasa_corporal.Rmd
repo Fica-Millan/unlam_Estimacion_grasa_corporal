@@ -1,0 +1,504 @@
+---
+title: "Analisis del df obesidad25"
+author: "Grupo 10"
+date: "2025-06-29"
+output:
+  html_document:
+    toc: true          # activa el índice automático
+    toc_float: true    # hace que el índice quede flotando al costado
+    toc_depth: 3       # profundidad del índice (niveles de encabezado que se muestran)
+    number_sections: true  # numera automáticamente las secciones
+    theme: cerulean    # tema visual del HTML (opcional, podes cambiar o quitar)
+    highlight: tango   # resaltado de sintaxis para código (opcional)
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+## Instalación y carga de librerías
+
+```{r librerias}
+libs <- c("readxl", "ggplot2", "dplyr", "tidyr", "ggcorrplot", "GGally", "scales",
+          "kableExtra", "summarytools", "formattable", "gt", "car", "broom",
+          "MASS", "ggfortify", "glue", "tibble")
+
+install_if_missing <- function(pkg) {
+  if (!require(pkg, character.only = TRUE)) install.packages(pkg)
+}
+
+invisible(lapply(libs, install_if_missing))
+
+invisible(lapply(libs, library, character.only = TRUE))
+```
+
+## Análisis Exploratorio de Datos (EDA)
+
+### Carga y descripción de los datos
+
+```{r carga_datos}
+datos <- read_excel("obesidad25.xlsx")
+
+kable(head(datos, 6), digits = 2, caption = "Primeras 6 observaciones") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+
+names(datos)
+
+summary(datos)
+
+str(datos)
+```
+
+### Verificación de NAs y duplicados
+
+```{r limpieza_datos}
+colSums(is.na(datos))
+
+datos_completos <- datos %>% drop_na()
+
+sum(duplicated(datos))
+
+dim(datos_completos)
+```
+
+### Gráficos univariados
+
+```{r graficos_univariados}
+datos %>% 
+  dplyr::select(where(is.numeric)) %>% 
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "valor") %>%
+  drop_na() %>%
+  ggplot(aes(x = valor)) +
+  geom_histogram(bins = 30, fill = "#b2d8b2", color = "darkgreen") +
+  facet_wrap(~ variable, scales = "free", ncol = 3) +
+  labs(title = "Distribución de variables numéricas", x = "Valor", y = "Frecuencia")
+```
+
+## Outliers
+
+```{r boxplots_variables}
+# Boxplots por variable
+datos %>%
+  dplyr::select(where(is.numeric)) %>%
+  pivot_longer(cols = everything(), names_to = "variable", values_to = "valor") %>%
+  drop_na(valor) %>%
+  ggplot(aes(x = variable, y = valor)) +
+  geom_boxplot(fill = "darkorange", color = "black") +
+  coord_flip() +
+  labs(title = "Boxplots de variables numéricas", x = "Variable", y = "Valor")
+```
+
+```{r contar_outliers}
+# Función para contar outliers por variable usando regla de Tukey
+contar_outliers <- function(x) {
+  q1 <- quantile(x, 0.25, na.rm = TRUE)
+  q3 <- quantile(x, 0.75, na.rm = TRUE)
+  iqr <- q3 - q1
+  sum(x < (q1 - 1.5 * iqr) | x > (q3 + 1.5 * iqr), na.rm = TRUE)
+}
+
+# Aplicar la función a todas las variables numéricas
+outliers_por_variable <- sapply(dplyr::select(datos_completos, where(is.numeric)), contar_outliers)
+print(outliers_por_variable)
+```
+
+```{r outliers_tabla}
+# Mostrar los valores outliers por variable
+outliers_valores <- lapply(dplyr::select(datos_completos, where(is.numeric)), function(x) {
+  boxplot.stats(x)$out
+})
+
+# Crear data.frame limpio, sin rownames
+outliers_resumen <- data.frame(
+  Variable = names(outliers_valores),
+  Valores_Atipicos = sapply(outliers_valores, function(x) paste(round(x, 2), collapse = " - ")),
+  row.names = NULL
+)
+
+# Imprimir tabla
+outliers_resumen %>%
+  kable(caption = "Valores atípicos detectados por variable", align = "l") %>%
+  kable_styling(bootstrap_options = c("striped", "hover", "condensed"), full_width = F)
+```
+
+### Análisis de outliers: altura
+
+```{r altura_outliers}
+# Mostrar filas donde altura == 73.75
+datos_completos %>% filter(altura ==  73.75)
+
+summary(datos_completos$altura)
+
+ggplot(datos_completos, aes(x = altura)) +
+  geom_histogram(bins = 30, fill = "darkorange", color = "black") +
+  labs(title = "Histograma de Altura", x = "Altura (cm)", y = "Frecuencia")
+
+datos_sin_outliers <- datos_completos %>% filter(altura != 73.75)
+summary(datos_sin_outliers)
+```
+
+### Análisis de outliers: pecho - cadera - muslo - rodilla
+
+```{r outliers_otros}
+get_outlier_index <- function(vec) {
+  q1 <- quantile(vec, 0.25, na.rm = TRUE)
+  q3 <- quantile(vec, 0.75, na.rm = TRUE)
+  iqr <- q3 - q1
+  which(vec < (q1 - 1.5 * iqr) | vec > (q3 + 1.5 * iqr))
+}
+
+out_pecho <- get_outlier_index(datos_sin_outliers$pecho)
+out_cadera <- get_outlier_index(datos_sin_outliers$cadera)
+out_muslo <- get_outlier_index(datos_sin_outliers$muslo)
+out_rodilla <- get_outlier_index(datos_sin_outliers$rodilla)
+
+outliers_indices <- unique(c(out_pecho, out_cadera, out_muslo, out_rodilla))
+
+personas_outliers <- datos_sin_outliers[outliers_indices, 
+                                        c("abdomen", "pecho", "cadera", "muslo", "rodilla", "grc")]
+
+personas_outliers <- personas_outliers[order(-personas_outliers$grc), ]
+
+formattable(personas_outliers, 
+            list(
+              grc = color_tile("white", "tomato"),
+              abdomen = color_tile("white", "lightblue")
+            ))
+
+ggplot(personas_outliers, aes(x = abdomen, y = grc)) +
+  geom_point(color = "darkred", size = 3) +
+  labs(title = "% GRC vs Abdomen en personas con outliers", x = "Circunferencia abdomen (cm)", y = "% Grasa corporal") +
+  theme_minimal()
+```
+
+### Análisis de outliers: abdomen
+
+```{r outliers_abdomen}
+q1 <- quantile(datos_completos$abdomen, 0.25, na.rm = TRUE)
+q3 <- quantile(datos_completos$abdomen, 0.75, na.rm = TRUE)
+iqr <- q3 - q1
+lim_inf <- q1 - 1.5 * iqr
+lim_sup <- q3 + 1.5 * iqr
+
+datos_sin_outliers_abdomen <- datos_sin_outliers %>%
+  filter(abdomen >= lim_inf & abdomen <= lim_sup)
+
+outliers_abdomen <- datos_completos %>%
+  filter(abdomen < lim_inf | abdomen > lim_sup)
+
+outliers_abdomen %>%
+  gt() %>%
+  tab_header(title = "Casos con valores atípicos en la variable abdomen") %>%
+  fmt_number(columns = everything(), decimals = 1)
+
+modelo_todos <- lm(grc ~ abdomen, data = datos_sin_outliers)
+modelo_sin_outliers <- lm(grc ~ abdomen, data = datos_sin_outliers_abdomen)
+summary(modelo_sin_outliers)
+
+cat("### Modelo con todos los datos ###\n")
+print(summary(modelo_todos))
+
+cat("\n### Modelo sin outliers en abdomen ###\n")
+print(summary(modelo_sin_outliers))
+
+datos_completos$modelo <- "Con outliers"
+datos_sin_outliers$modelo <- "Sin outliers"
+
+ggplot() +
+  geom_point(data = datos_completos, aes(x = abdomen, y = grc), alpha = 0.5, color = "grey") +
+  geom_point(data = datos_sin_outliers, aes(x = abdomen, y = grc), alpha = 0.8, color = "#69b3a2") +
+  geom_smooth(data = datos_completos, aes(x = abdomen, y = grc, color = modelo, linetype = modelo),
+              method = "lm", se = FALSE) +
+  geom_smooth(data = datos_sin_outliers, aes(x = abdomen, y = grc, color = modelo, linetype = modelo),
+              method = "lm", se = FALSE) +
+  scale_color_manual(values = c("Con outliers" = "blue", "Sin outliers" = "darkred")) +
+  scale_linetype_manual(values = c("Con outliers" = "solid", "Sin outliers" = "dashed")) +
+  labs(title = "Comparación del modelo lineal con y sin outliers en abdomen",
+       x = "Abdomen (cm)", y = "% de grasa corporal",
+       color = "Modelo", linetype = "Modelo") +
+  theme_minimal()
+```
+
+## Análisis bivariado y correlaciones
+
+```{r correlaciones}
+cor_matrix <- cor(dplyr::select(datos_sin_outliers, where(is.numeric)), use = "complete.obs")
+
+ggcorrplot(cor_matrix,
+           type = "lower",
+           lab = TRUE,
+           lab_size = 3,
+           tl.cex = 10,
+           title = "Matriz de correlación entre variables numéricas")
+
+cor_con_grc <- sort(cor_matrix["grc", ], decreasing = TRUE)
+cor_tabla <- enframe(cor_con_grc, name = "Variable", value = "Correlación")
+
+cor_tabla %>%
+  gt() %>%
+  tab_header(title = "Correlación con % de grasa corporal (grc)") %>%
+  fmt_number(columns = "Correlación", decimals = 3) %>%
+  cols_label(Variable = "Variable", Correlación = "Correlación")
+```
+
+```{r correlaciones_grafico}
+top_vars <- names(sort(cor_con_grc[-1], decreasing = TRUE))[1:3]
+
+datos_sin_outliers %>%
+  dplyr::select(grc, all_of(top_vars)) %>%
+  pivot_longer(cols = -grc, names_to = "variable", values_to = "valor") %>%
+  ggplot(aes(x = valor, y = grc)) +
+  geom_point(alpha = 0.6, color = "orange") +
+  geom_smooth(method = "lm", se = TRUE, color = "red") +
+  facet_wrap(~ variable, scales = "free_x") +
+  labs(title = "Relación entre grc y las variables más correlacionadas",
+       x = "Valor de variable predictora", y = "% de grasa corporal")
+```
+
+```{r ggpairs_grc}
+datos_sin_outliers <- datos_sin_outliers %>%
+  mutate(grc_cat = cut(grc,
+                       breaks = quantile(grc, probs = c(0, 1/3, 2/3, 1), na.rm = TRUE),
+                       labels = c("Bajo", "Medio", "Alto"),
+                       include.lowest = TRUE))
+
+GGally::ggpairs(
+  datos_sin_outliers,
+  columns = c("grc", top_vars),
+  mapping = aes(color = grc_cat),
+  title = "Relaciones entre grc y variables predictoras (color por nivel de grasa)"
+)
+```
+
+```{r hist_grc}
+ggplot(datos_sin_outliers, aes(x = grc)) +
+  geom_histogram(aes(y = after_stat(density)), bins = 30, fill = "#69b3a2", color = "darkgreen") +
+  geom_density(color = "darkred", linewidth = 1) +
+  labs(title = "Distribución y densidad del % de grasa corporal", 
+       x = "grc", y = "Densidad")
+```
+
+## Modelo 1: Regresión lineal simple
+
+### Selección de la variable predictora
+
+```{r seleccion_predictora}
+variable_predictora <- "abdomen"
+```
+
+### Ajuste del modelo lineal simple
+
+```{r ajuste_rls}
+modelo_rls <- lm(grc ~ abdomen, data = datos_sin_outliers)
+summary(modelo_rls)
+```
+
+### Interpretación del modelo
+
+```{r interpretacion_rls}
+coef(modelo_rls)
+```
+
+### Visualización del ajuste
+
+```{r grafico_rls}
+ggplot(datos_sin_outliers, aes(x = abdomen, y = grc)) +
+  geom_point(alpha = 0.6, color = "darkorange") +
+  geom_smooth(method = "lm", se = TRUE, color = "darkred", fill = "blue", alpha = 0.3) +
+  labs(title = "Ajuste del modelo lineal simple: grc ~ abdomen",
+       x = "Abdomen (cm)", y = "% de grasa corporal")
+```
+
+## Modelo 2: Regresión lineal múltiple con todas las variables numéricas
+
+### Ajuste del modelo múltiple
+
+```{r ajuste_multiples}
+mod_full <- lm(grc ~ peso + altura + cuello + pecho + abdomen + cadera + muslo + rodilla, data = datos_sin_outliers)
+```
+
+### Evaluación global del modelo
+
+```{r evaluacion_global_multiples}
+summary(mod_full)
+coef(mod_full)
+```
+
+### Análisis de significancia individual de variables
+
+```{r significancia_individual}
+summary(mod_full)$coefficients
+```
+
+### Diagnóstico de multicolinealidad
+
+```{r multicolinealidad}
+vif(mod_full)
+```
+
+## Comparación y selección de modelos de regresión
+
+### Modelo con selección automática
+
+```{r modelo_automatico}
+modelo_completo <- lm(grc ~ peso + altura + cuello + pecho + abdomen + cadera + muslo + rodilla, data = datos_sin_outliers)
+mod_automatico <- stepAIC(modelo_completo, direction = "both", trace = FALSE)
+summary(mod_automatico)
+vif(mod_automatico)
+```
+
+### Modelo con selección manual
+
+```{r modelo_manual}
+mod_manual <- lm(grc ~ abdomen + cuello, data = datos_sin_outliers)
+summary(mod_manual)
+vif(mod_manual)
+```
+
+## Evaluación del modelo seleccionado
+
+### Verificación de supuestos del modelo lineal
+
+```{r supuestos_modelo}
+autoplot(mod_automatico, 
+         which = 1:4, 
+         colour = '#69b3a2', 
+         smooth.colour = "red",
+         smooth.linetype = "dashed",
+         size = 1)
+
+tidy(mod_automatico) %>%
+  gt() %>%
+  tab_header(title = "Coeficientes del modelo automático") %>%
+  fmt_number(columns = c(estimate, std.error, statistic, p.value), decimals = 3) %>%
+  cols_label(
+    term = "Variable",
+    estimate = "Estimación",
+    std.error = "Error Est.",
+    statistic = "Valor t",
+    p.value = "Valor p"
+  )
+```
+
+
+
+### Correlación entre variables seleccionadas
+
+```{r correlacion_seleccionadas}
+names(mod_automatico$coefficients)
+vars_seleccionadas <- names(mod_automatico$coefficients)[-1]
+cor_select <- cor(datos_sin_outliers[, vars_seleccionadas])
+ggcorrplot(cor_select, lab = TRUE, type = "lower", title = "Correlación entre variables seleccionadas")
+```
+
+
+
+### Detección de observaciones influyentes
+
+```{r deteccion_influyentes}
+mod_auto <- lm(grc ~ altura + cuello + abdomen + cadera, data = datos_sin_outliers)
+
+hii <- hatvalues(mod_auto)
+ri <- rstudent(mod_auto)
+CDi <- cooks.distance(mod_auto)
+
+umbral <- 4 / nrow(datos_sin_outliers)
+
+cook_df <- data.frame(
+  obs = 1:length(CDi),
+  CD = CDi,
+  influente = CDi > umbral
+)
+
+ggplot(cook_df, aes(x = obs, y = CD, color = influente)) +
+  geom_segment(aes(xend = obs, yend = 0), linewidth = 0.8) +
+  scale_color_manual(values = c("FALSE" = "red", "TRUE" = "darkgreen")) +
+  geom_hline(yintercept = umbral, linetype = "dashed", color = "darkblue") +
+  labs(title = "Distancia de Cook",
+       x = "Observación", y = "Cook's Distance", color = "Influyente") +
+  theme_minimal()
+
+influyentes <- which(CDi > umbral)
+
+leverage_df <- data.frame(leverage = hii)
+umbral_leverage <- 2 * length(coef(mod_auto)) / nrow(datos_sin_outliers)
+
+ggplot(leverage_df, aes(x = leverage)) +
+  geom_histogram(binwidth = 0.01, fill = "steelblue", color = "white") +
+  geom_vline(xintercept = umbral_leverage, color = "darkred", linetype = "dashed", size = 1) +
+  annotate("text", x = umbral_leverage, y = Inf,
+           label = paste0("Umbral: ", round(umbral_leverage, 3)),
+           vjust = 2, hjust = 0, color = "darkred", angle = 90, size = 3.5) +
+  labs(title = "Distribución del leverage",
+       x = "Leverage (hii)", y = "Frecuencia") +
+  theme_minimal()
+
+leverage_alto <- which(hii > umbral_leverage)
+interseccion <- intersect(influyentes, leverage_alto)
+
+cols_num <- datos_sin_outliers %>% dplyr::select(where(is.numeric)) %>% names()
+
+datos_sin_outliers %>%
+  slice(interseccion) %>%
+  mutate(Nro_Obs = as.integer(interseccion)) %>%
+  dplyr::select(Nro_Obs, everything()) %>%
+  gt() %>%
+  tab_header(
+    title = "Observaciones influyentes con leverage alto"
+  ) %>%
+  fmt_number(
+    columns = c("Nro_Obs"),
+    decimals = 0
+  ) %>%
+  fmt_number(
+    columns = setdiff(cols_num, "Nro_Obs"),
+    decimals = 1
+  ) %>%
+  cols_label(
+    Nro_Obs = "Nro Obs",
+    grc = "% Grasa",
+    peso = "Peso (kg)",
+    altura = "Altura (cm)",
+    cuello = "Cuello (cm)",
+    pecho = "Pecho (cm)",
+    abdomen = "Abdomen (cm)",
+    cadera = "Cadera (cm)",
+    muslo = "Muslo (cm)",
+    rodilla = "Rodilla (cm)"
+  ) %>%
+  tab_style(
+    style = cell_borders(sides = "all", color = "gray"),
+    locations = cells_body()
+  )
+
+cat(glue::glue("
+Resumen de observaciones influyentes
+────────────────────────────────────────────
+✔ Observaciones influyentes por Cook's Distance: {length(influyentes)}
+✔ Observaciones con leverage alto: {length(leverage_alto)}
+✔ Observaciones que cumplen ambos criterios: {length(interseccion)}
+
+IDs influyentes por Cook (no leverage alto):
+{paste(setdiff(influyentes, leverage_alto), collapse = ', ')}
+
+IDs con leverage alto (no influyentes por Cook):
+{paste(setdiff(leverage_alto, influyentes), collapse = ', ')}
+
+IDs en la intersección (Cook + leverage alto):
+{paste(interseccion, collapse = ', ')}
+"))
+
+```
+
+### Predicción para nuevos casos
+
+```{r prediccion_nuevos_casos}
+nuevos_casos <- data.frame(
+  altura = c(165, 175, 185), cuello = c(35, 40, 45),
+  abdomen = c(85, 100, 115),
+  cadera = c(90, 100, 110)
+)
+
+predict(mod_automatico, newdata = nuevos_casos, interval = "confidence")
+predict(mod_automatico, newdata = nuevos_casos, interval = "prediction")
+```
