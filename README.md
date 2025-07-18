@@ -14,6 +14,39 @@ El análisis se basa en el dataset `obesidad25`, el cual contiene mediciones rea
 
 ---
 
+## 🧪 Tecnologías utilizadas
+
+Este proyecto fue desarrollado en **R** para análisis estadístico, visualización y modelado. A continuación se listan las librerías utilizadas:
+
+#### Visualización de datos
+![ggplot2](https://img.shields.io/badge/ggplot2-DC5F00?style=flat&logo=r&logoColor=white)
+![ggcorrplot](https://img.shields.io/badge/ggcorrplot-DC5F00?style=flat&logo=r&logoColor=white)
+![GGally](https://img.shields.io/badge/GGally-DC5F00?style=flat&logo=r&logoColor=white)
+![scales](https://img.shields.io/badge/scales-DC5F00?style=flat&logo=r&logoColor=white)
+![ggfortify](https://img.shields.io/badge/ggfortify-DC5F00?style=flat&logo=r&logoColor=white)
+
+#### Manipulación y preparación de datos
+![dplyr](https://img.shields.io/badge/dplyr-198754?style=flat&logo=r&logoColor=white)
+![tidyr](https://img.shields.io/badge/tidyr-198754?style=flat&logo=r&logoColor=white)
+![tibble](https://img.shields.io/badge/tibble-198754?style=flat&logo=r&logoColor=white)
+![glue](https://img.shields.io/badge/glue-198754?style=flat&logo=r&logoColor=white)
+![readxl](https://img.shields.io/badge/readxl-198754?style=flat&logo=r&logoColor=white)
+
+#### Reportes y tablas
+![kableExtra](https://img.shields.io/badge/kableExtra-0D6EFD?style=flat&logo=r&logoColor=white)
+![gt](https://img.shields.io/badge/gt-0D6EFD?style=flat&logo=r&logoColor=white)
+![formattable](https://img.shields.io/badge/formattable-0D6EFD?style=flat&logo=r&logoColor=white)
+![summarytools](https://img.shields.io/badge/summarytools-0D6EFD?style=flat&logo=r&logoColor=white)
+
+#### Modelado y análisis estadístico
+![MASS](https://img.shields.io/badge/MASS-6F42C1?style=flat&logo=r&logoColor=white)
+![car](https://img.shields.io/badge/car-6F42C1?style=flat&logo=r&logoColor=white)
+![broom](https://img.shields.io/badge/broom-6F42C1?style=flat&logo=r&logoColor=white)
+
+
+
+---
+
 ## 🎯 Objetivos del Proyecto
 
 - Realizar un **análisis exploratorio de datos** (EDA) para identificar patrones, distribuciones y outliers.
