@@ -12,7 +12,6 @@ aplicable en contextos clínicos o poblacionales.
 
 El análisis se basa en el dataset `obesidad25`, el cual contiene mediciones reales de 260 individuos, incluyendo variables como peso, altura, cuello, pecho, abdomen, cadera, muslo y rodilla.
 
----
 
 ## 🧪 Tecnologías utilizadas
 
@@ -43,10 +42,6 @@ Este proyecto fue desarrollado en **R** para análisis estadístico, visualizaci
 ![car](https://img.shields.io/badge/car-6F42C1?style=flat&logo=r&logoColor=white)
 ![broom](https://img.shields.io/badge/broom-6F42C1?style=flat&logo=r&logoColor=white)
 
-
-
----
-
 ## 🎯 Objetivos del Proyecto
 
 - Realizar un **análisis exploratorio de datos** (EDA) para identificar patrones, distribuciones y outliers.
@@ -55,14 +50,10 @@ Este proyecto fue desarrollado en **R** para análisis estadístico, visualizaci
 - Evaluar los supuestos clásicos del modelo lineal y detectar posibles problemas como multicolinealidad o observaciones influyentes.
 - Generar **predicciones para nuevos casos** con sus respectivos intervalos de confianza y predicción.
 
----
-
 ## 📌 Archivos incluidos
 - `TP_RL_grasa_corporal.pdf`: Informe final del trabajo práctico
 - `TP_RL_grasa_corporal_script.R`: Código completo del análisis en R
 - `TP_RL_grasa_corporal.Rmd`: Documento RMarkdown con visualizaciones interactivas y vistas en HTML
-
----
 
 ## 🔍 Principales hallazgos
 
@@ -75,32 +66,12 @@ Este proyecto fue desarrollado en **R** para análisis estadístico, visualizaci
   - Bajo error estándar residual = **4.537**
   - Cumplimiento razonable de supuestos clásicos
 
----
+## 👥 Autores
 
-## 🛠️ Tecnologías utilizadas
+| Yesica Fica Millán        | Florencia Miranda Charca  | Franco Petraroia           |
+|---------------------------|---------------------------|----------------------------|
+| [LinkedIn](https://www.linkedin.com/in/yesica-fica-millan/) | [LinkedIn](https://www.linkedin.com/in/florencia-charca/) | [LinkedIn](https://www.linkedin.com/in/franco-petraroia/) |
 
-- **Lenguaje:** R
-- **Librerías:** `ggplot2`, `dplyr`, `car`, `GGally`, `MASS`, entre otras
-- **Entorno:** RStudio + R Markdown
 
----
-
-## 👩‍💻 Autores
-
-Grupo 10 – Especialización en Ciencia de Datos – UNLaM  
-- Yesica Fica Millán  
-- Florencia Miranda Charca  
-- Franco Petraroia  
-
----
-
-## 📄 Licencia
-
-Este proyecto se encuentra disponible solo con fines educativos. Para usos distintos, por favor contactar a los autores.
-
----
-
-## 📬 Contacto
-
-Para consultas, sugerencias o colaboraciones, podés escribirme por [LinkedIn](https://www.linkedin.com/in/yesica-fica-millan/) o abrir un [Issue](https://github.com/) en este repositorio.
-
+## 📎 Licencia
+Este proyecto se comparte con fines académicos y educativos.
